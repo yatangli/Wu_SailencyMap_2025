@@ -827,6 +827,40 @@ def rf_pos_plot(rois_pos_list,figsize=(8,8),x_lim=(50,140),y_lim=(-20,70),c='blu
     plt.show()
     return fig
 
+def plot_box_dots(data, colors, labels, positions=None, ticks=None, widths=None,
+    figsize=(5, 5)):
+    '''
+    data: shape (n_samples, n_boxes)
+    ticks: the location of xticks
+    '''
+    n_boxes = data.shape[1]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    meanlineprops = dict(linestyle='--', linewidth=1, color='black')
+    medianprops = dict(linestyle='-', linewidth=1, color='cyan')
+    ax.boxplot(data, showmeans=True, meanline=True, meanprops=meanlineprops,
+        positions=positions, medianprops=medianprops, showfliers=False,
+        widths=widths)
+    for i in range(n_boxes):
+        y = data[:, i]
+        y = y[y < 25]
+        if positions is None:
+            x = np.random.normal(i+1, 0.04, size=len(y))
+        else:
+            x = np.random.normal(positions[i], 0.04, size=len(y))
+        if type(colors) == list:
+            ax.plot(x, y, 'o', color=colors[i], alpha=0.2)
+        if type(colors) == str:
+            ax.plot(x, y, 'o', color=colors, alpha=0.2)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylim(bottom=0)
+    if ticks is None:
+        ax.set_xticks(np.arange(len(labels))+1, labels)
+    else:
+        ax.set_xticks(ticks, labels)
+    plt.show()
+
 def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
     indicate=[], auto_baseline=False):
     '''
@@ -2065,6 +2099,140 @@ def distance_resp(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1, idx_2,
             axis[c].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     plt.subplots_adjust(wspace=0.3)
     plt.show()
+
+def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
+    idx_2, sub_title=None, thr=30):
+    '''
+    distance: distance to RF center, shape (4, 6, n_rois)
+    resp_*: response amplitude, shape (4, 6, n_rois)
+    resp_bg_*: background response amplitude, shape (n_rois)
+    '''
+    x_max = 50
+    ncols = 4
+    labelsize = 20
+    fig, axis = plt.subplots(nrows=1, ncols=ncols, figsize=(ncols*5, 5))
+
+    ax_plot_distanceRFcenter_violin(axis[0], distance, resp_1, 50, idx_1, 'red',
+        thr=thr)
+    _data = resp_bg_1[idx_1]
+    plot_single_violin(axis[0], _data, [55], thr=thr)
+
+    ax_plot_distanceRFcenter_violin(axis[1], distance, resp_2, 50, idx_1, 'red',
+        thr=thr)
+    _data = resp_bg_2[idx_1]
+    plot_single_violin(axis[1], _data, [55])
+
+    ax_plot_distanceRFcenter_violin(axis[2], distance, resp_1, 50, idx_2, 
+        'blue', thr=thr)
+    _data = resp_bg_1[idx_2]
+    plot_single_violin(axis[2], _data, [55], thr=thr)
+
+    ax_plot_distanceRFcenter_violin(axis[3], distance, resp_2, 50, idx_2,
+        'blue', thr=thr)
+    _data = resp_bg_2[idx_2]
+    plot_single_violin(axis[3], _data, [55], thr=thr)
+
+    for i in range(ncols):
+        y_min = 0
+        y_max = 0
+        for c in range(ncols):
+            y = axis[c].get_ylim()
+            y_min = np.min((y[0], y_min))
+            y_max = np.max((y[1], y_max))
+        for c in range(ncols):
+            axis[c].set_xlim(0, right=x_max+9)
+            axis[c].tick_params(axis='both', which='major', labelsize=labelsize)
+            axis[c].set_ylim(y_min, y_max)
+            axis[c].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    plt.subplots_adjust(wspace=0.3)
+    plt.show()
+
+def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50, 
+    idx_sel=None, bar_color='gray', sub_title=None, thr=30):
+    '''
+    plot the distance to RF center VS data.
+    distance_rf_center: shape in (4, 6, n_rois)
+    data: shape in (4, 6, n_rois), same as distance_rf_center
+    '''
+    # plot the distance to RF center VS data
+    idx_good = np.logical_not(np.isnan(distance_rf_center[0,0,:]))
+    # idx_good = np.logical_and(idx_not_nan, np.abs(data)!=1)
+    if idx_sel is not None:
+        idx_good = np.logical_and(idx_good, idx_sel)
+    
+    idx_good_indx = np.where(idx_good)[0]
+    # print('number of rois: {}'.format(idx_good.sum()))
+    
+    distance_rf_center_sel = distance_rf_center[:,:,idx_good]
+    data_sel = data[:,:,idx_good]
+    # print('data_sel shape: {}'.format(data_sel.shape))
+    
+    salient_resp = np.empty(data.shape[2])
+    salient_resp[:] = np.nan
+    for i in range(data_sel.shape[2]):
+        _min_idx = min_idx_2d(distance_rf_center_sel[:,:,i])
+        salient_resp[idx_good_indx[i]] = data_sel[_min_idx[0], _min_idx[1], i]
+    
+    bin_width = 5
+    bin_n = np.ceil(x_max / bin_width).astype(int)
+
+    data_ls = []
+    for i in range(bin_n):
+        idx_sel = np.logical_and(distance_rf_center_sel>=i*bin_width, 
+            distance_rf_center_sel<(i+1)*bin_width)
+        _data = data_sel[idx_sel]
+        idx_sel =  _data < thr
+        data_ls.append(_data[idx_sel])
+
+    facecolor = mcolors.to_rgb(bar_color)
+    facecolor_alpha = (facecolor[0], facecolor[1], facecolor[2], 0.5)
+    positions = (np.arange(bin_n) + 1/2) * bin_width
+    parts = ax.violinplot(data_ls, positions=positions, showmeans=False,
+        showmedians=False, showextrema=False, widths=bin_width*0.8)
+    for pc in parts['bodies']:
+        pc.set_facecolor(facecolor)
+        pc.set_edgecolor('black')
+        pc.set_alpha(0.5)
+    
+    for i in range(bin_n):
+        quartile1, medians, quartile3 = np.percentile(data_ls[i], [25, 50, 75],
+            axis=0)
+        sorted_array = np.sort(data_ls[i])
+        whisker = adjacent_values(sorted_array, quartile1, quartile3)
+        mean = np.mean(data_ls[i])
+
+        ax.scatter(positions[i], medians, marker='o', color='white', s=30,
+            zorder=3)
+        ax.scatter(positions[i], mean, marker='_', color='cyan', s=200,
+            zorder=3)
+        ax.vlines(positions[i], quartile1, quartile3, color='k', linestyle='-',
+            lw=7)
+        ax.vlines(positions[i], whisker[0], whisker[1], color='k',
+            linestyle='-', lw=1)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.set_title(sub_title)
+    return salient_resp
+
+def plot_single_violin(ax, data, pos, thr=30):
+    data = data[np.where(data < thr)]
+    parts = ax.violinplot(data, pos, showmeans=False, showmedians=False,
+        showextrema=False, widths=4)
+    parts['bodies'][0].set_facecolor('gray')
+    parts['bodies'][0].set_edgecolor('black')
+    parts['bodies'][0].set_alpha(0.5)
+
+    quartile1, medians, quartile3 = np.percentile(data, [25, 50, 75], axis=0)
+    sorted_array = np.sort(data)
+    whisker = adjacent_values(sorted_array, quartile1, quartile3)
+    mean = np.mean(data)
+
+    ax.scatter(pos, medians, marker='o', color='white', s=30, zorder=3)
+    ax.scatter(pos, mean, marker='_', color='cyan', s=200, zorder=3)
+    ax.vlines(pos, quartile1, quartile3, color='k', linestyle='-', lw=7)
+    ax.vlines(pos, whisker[0], whisker[1], color='k', linestyle='-', lw=1)
 
 def cal_si(x,y):
     '''
@@ -3364,7 +3532,6 @@ def scatter_moving(x, y, thr=0.03, plot=True, title=None):
         plt.show()
     return mean, sem
 
-
 def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=False,
     fit_line=False, exclude_zero=False, exclude_extremum=False, xlim=None, 
     ylim=None, xlabel=None, ylabel=None, title=None, fit_line_color='black',
@@ -3831,7 +3998,6 @@ def read_data_suite2p(all_data, group_name, dataset_name, parent_folder,
                 data_ls.append(_data[group_name][dataset_name])
 
     return data_ls
-
 
 def read_behavior_data(all_data, data_name):
     '''
