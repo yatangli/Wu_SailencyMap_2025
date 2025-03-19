@@ -101,10 +101,9 @@ pref_ori, osi, pref_dir, dsi = ori_dir(data)
 print([pref_ori, osi, pref_dir, dsi])
 '''
 
-def arrow_plot_bicolor(mb,rois_pos_all,roi_sel,type,only_pref=True,arrow_length_input=12, line_length_input=12, si_thr=0.1, title=None):
-        
-    figsize = (3, 3)
-    fontsize = 20
+def arrow_plot_bicolor(mb,rois_pos_all, roi_sel, type, only_pref=True,
+    arrow_length_input=12, si_thr=0.1, title=None, figsize=(7, 7)):
+    fontsize = 15
 
     rois_pos = rois_pos_all[roi_sel,:]
     n_rois = rois_pos.shape[0]
@@ -112,7 +111,7 @@ def arrow_plot_bicolor(mb,rois_pos_all,roi_sel,type,only_pref=True,arrow_length_
     # pref_ori = mb['pref_ori'][roi_sel]
     dsi = mb['dsi'][roi_sel]
     # osi = mb['osi'][roi_sel]
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
     ax.set_xlim(-35, 530)
     ax.set_ylim(-35, 530)
@@ -131,20 +130,26 @@ def arrow_plot_bicolor(mb,rois_pos_all,roi_sel,type,only_pref=True,arrow_length_
             else:
                 ax.scatter(rois_pos[r,0],rois_pos[r,1],s=5,marker='.',c='black',alpha=0.8)
         else:
-            arrow_length = dsi[r]*100/12*line_length_input + 3
-            if dsi[r]>=0.05:
+            arrow_length = dsi[r]*100/12*arrow_length_input
+            if dsi[r]>=si_thr:
                 xy = (rois_pos[r][0] + math.cos(math.radians(pref_dir[r]))*arrow_length,
                     rois_pos[r][1] + math.sin(math.radians(pref_dir[r]))*arrow_length)
                 xytext =  (rois_pos[r][0] - math.cos(math.radians(pref_dir[r]))*arrow_length,
                         rois_pos[r][1] - math.sin(math.radians(pref_dir[r]))*arrow_length)
                 if type[r]:
-                    # arrowstyle='->, head_width=0.1',  linewidth=1,
-                    ax.annotate('', xy=xy, xytext=xytext,
-                                arrowprops=dict(color='red', arrowstyle='->, head_width={}, head_length={}'.format(dsi[r], dsi[r]*2), mutation_scale=10))
+                    ax.annotate('', xy=xy, xytext=xytext, arrowprops=dict(
+                        color='red', arrowstyle='->, head_width={},\
+                        head_length={}'.format(dsi[r], dsi[r]*2), mutation_scale=10))
                 else:
-                    ax.annotate('', xy=xy, xytext=xytext,
-                            arrowprops=dict(color='blue', arrowstyle='->, head_width={}, head_length={}'.format(dsi[r], dsi[r]*2), mutation_scale=10))
-        
+                    ax.annotate('', xy=xy, xytext=xytext, arrowprops=dict(
+                        color='blue', arrowstyle='->, head_width={},\
+                            head_length={}'.format(dsi[r], dsi[r]*2),
+                            mutation_scale=10))
+    # plot the scale bar
+    scale_bar_length = 0.5*100/12*arrow_length_input
+    ax.annotate('', xy=(500, 500), xytext=(500-scale_bar_length, 500),
+                arrowprops=dict(color='black', arrowstyle='->, head_length=0.5,\
+                    head_width=0.25', mutation_scale=10))
     ax.invert_yaxis()
     ax.tick_params(axis='both', labelsize=fontsize)
     plt.suptitle(title)
@@ -633,19 +638,20 @@ def line_plot(mb,rois_pos_all,roi_sel,only_pref=True,line_length_input=12, si_th
 # rois_pos = np.stack((np.arange(0,11),np.arange(0,11)),axis=1)*40
 # arrow_plot(pref_dir,pref_dir,rois_pos,arrow_length_input=np.arange(1,12)/12,line_length_input=np.arange(1,12)/12)    
     
-def line_plot_bicolor(data_dict,rois_pos_all,roi_sel,cell_type,only_pref=True,line_length_input=12, si_thr=0.1, title=None):
+def line_plot_bicolor(data_dict, rois_pos_all, roi_sel, cell_type, 
+    only_pref=True, line_length_input=12, si_thr=0.1, title=None,
+    figsize=(5, 5)):
     '''
     dict: dictionary, {'pref_ori': np.array, 'osi': np.array}
     only_pref: True, the line length is equal; False, the line length show OSI
     cell_type: cell type, if true, plot line as red, if false, plot lien as blue
     '''
-    figsize = (3, 3)
-    fontsize = 20
+    fontsize = 15
     rois_pos = rois_pos_all[roi_sel,:]
     n_rois = rois_pos.shape[0]
     pref_ori = data_dict['pref_ori'][roi_sel]
     osi = data_dict['osi'][roi_sel]
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
     ax.set_xlim(-35, 530)
     ax.set_ylim(-35, 530)
@@ -676,7 +682,11 @@ def line_plot_bicolor(data_dict,rois_pos_all,roi_sel,cell_type,only_pref=True,li
             else:
                 ax.annotate('', xy=xy, xytext=xytext,
                             arrowprops=dict(color='blue', arrowstyle='-'))
-        
+
+    # plot the scale bar
+    scale_bar_length = 0.5*100/12*line_length_input
+    ax.plot([500, 500-scale_bar_length], [500, 500], color='black', linewidth=1)
+
     ax.invert_yaxis()
     ax.tick_params(axis='both', labelsize=fontsize)
     plt.suptitle(title)
@@ -752,7 +762,9 @@ def rois_plot(rois_pos_list,figsize=(8,8),x_lim=(0,512),y_lim=(0,512),c='blue',a
     plt.suptitle(title)
     plt.show()
 
-def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5), x_lim=(-10,530), y_lim=(-10,530), alpha=1, exclude_extremum=True, yaxis_invert=True, vmax=None, title=None):
+def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5),
+        x_lim=(-10,530), y_lim=(-10,530), alpha=1, exclude_extremum=True,
+        yaxis_invert=True, vmax=None, title=None):
     good = np.logical_not(np.isnan(amp)) # not nan
     if exclude_extremum is not None:
         not_one = abs(amp) < 0.95 # # to exclude the values around 1
@@ -779,7 +791,8 @@ def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5), x_lim=(-10,5
     _roi_pos = rois_pos[is_inh, :]
     idx = np.argsort(_amp)
 
-    s_inh = ax_scatter.scatter(_roi_pos[idx, 0],_roi_pos[idx, 1],c=_amp[idx],cmap=cmap,alpha=alpha, edgecolors='blue', linewidths=0.3, vmax=vmax) # edgecolors='lightgray', linewidths=0.3
+    s_inh = ax_scatter.scatter(_roi_pos[idx, 0],_roi_pos[idx, 1],c=_amp[idx],
+        cmap=cmap,alpha=alpha, edgecolors='blue', linewidths=0.3, vmax=vmax)
 
     # for excitatory rois
     # print(np.max(amp[is_exc]), np.min(amp[is_exc]))
@@ -788,7 +801,8 @@ def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5), x_lim=(-10,5
     _roi_pos = rois_pos[is_exc, :]
     idx = np.argsort(_amp)
 
-    s_exc = ax_scatter.scatter(_roi_pos[idx, 0],_roi_pos[idx, 1],c=_amp[idx],cmap=cmap,alpha=alpha, edgecolors='red', linewidths=0.3, vmin=-0.45) # edgecolors='lightgray', linewidths=0.3
+    s_exc = ax_scatter.scatter(_roi_pos[idx, 0],_roi_pos[idx, 1],c=_amp[idx],
+        cmap=cmap,alpha=alpha, edgecolors='red', linewidths=0.3, vmin=-0.45)
     
     if yaxis_invert:
         ax_scatter.invert_yaxis()
@@ -796,14 +810,17 @@ def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5), x_lim=(-10,5
     ax_scatter.tick_params(axis='both', labelsize=fontsize)
 
     axis_colorbar = subfigs[1].subplots(2, 1)
-    fig.colorbar(s_exc, cax=axis_colorbar[0], location='left', orientation='vertical')
-    axis_colorbar[0].tick_params(axis='both', labelsize=10)
+    fig.colorbar(s_exc, cax=axis_colorbar[0], orientation='vertical')
+    axis_colorbar[0].tick_params(axis='both', labelsize=10, left=True, 
+        labelleft=True, right=False, labelright=False)
     locs = [-0.3, 0, 0.3]
     # axis_colorbar[0].set_yticks(locs)
     # axis_colorbar[0].set_ylabel('Excitatory')
-    fig.colorbar(s_inh, cax=axis_colorbar[1], location='left', orientation='vertical')
-    axis_colorbar[1].tick_params(axis='both', labelsize=10)
+    fig.colorbar(s_inh, cax=axis_colorbar[1], orientation='vertical')
+    axis_colorbar[1].tick_params(axis='both', labelsize=10, left=True,
+        labelleft=True, right=False, labelright=False)
     # axis_colorbar[1].set_ylabel('Inhibitory')
+    # locs = np.arange(-0.8, 0.71, 0.3)
     # axis_colorbar[1].set_yticks(locs)
     plt.suptitle(title)
     # plt.tight_layout()
@@ -881,7 +898,8 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
     # ylim_max = np.max(data)
     # print('ylim_max - ylim_min = {}'.format(ylim_max-ylim_min))
     if n_cols == 1:
-        fig, axis = plt.subplots(nrows=n_rows, ncols=n_cols, layout='constrained', figsize=(n_cols*2, n_rows))
+        fig, axis = plt.subplots(nrows=n_rows, ncols=n_cols,
+            layout='constrained', figsize=(n_cols*2, n_rows))
 
         ylim_min = 0
         ylim_max = 0
@@ -894,7 +912,8 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
                 mean = mean - mean_baseline
             y1 = mean + np.std(_temp, axis=1)
             y2 = mean - np.std(_temp, axis=1)
-            axis[r].fill_between(np.arange(xlim_max), y1, y2, color='black', alpha=0.3)
+            axis[r].fill_between(np.arange(xlim_max), y1, y2, color='black',
+                alpha=0.3)
             axis[r].plot(mean, color='black')
             axis[r].set_xlim(left=xlim_min)
             axis[r].set_xticks([])
@@ -903,7 +922,8 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
             axis[r].spines['right'].set_visible(False)
             axis[r].spines['left'].set_visible(False)
             axis[r].spines['bottom'].set_visible(False)
-            axis[r].hlines(y=0, xmin=window[0], xmax=window[1], color='r', linewidth=1, linestyle='--')
+            axis[r].hlines(y=0, xmin=window[0], xmax=window[1], color='r',
+                linewidth=1)
 
             y = axis[r].get_ylim()
             ylim_min = np.min((y[0], ylim_min))
@@ -919,13 +939,16 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
             right = 0.99
             hline_length = 0.2
             vline_length = 0.3 / (ylim_max - ylim_min)
-            axis[r].axhline(y = ylim_min + (ylim_max-ylim_min)*top, xmin=right-hline_length, xmax=right, color='black', linewidth=1)
+            axis[r].axhline(y = ylim_min + (ylim_max-ylim_min)*top,
+                xmin=right-hline_length, xmax=right, color='black', linewidth=1)
             # axis[i].text(0.15, ylim_min - 0.1, '10 units', fontsize=12)
-            axis[r].axvline(x = right*xlim_max, ymin=top-vline_length, ymax=top, color='black', linewidth=1)
+            axis[r].axvline(x = right*xlim_max, ymin=top-vline_length, ymax=top,
+                color='black', linewidth=1)
             # axis[i].text(xlim_min - 0.5, 0.15, '0 ms', fontsize=12)
 
     if n_cols > 1:
-        fig, axis = plt.subplots(nrows=n_rows, ncols=n_cols, layout='constrained', figsize=(n_cols*2, n_rows))
+        fig, axis = plt.subplots(nrows=n_rows, ncols=n_cols, 
+            layout='constrained', figsize=(n_cols*2, n_rows))
         for r in range(n_rows):
             for c in range(n_cols):
                 _temp = data[c, :, r, :]
@@ -935,8 +958,9 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
                     mean = mean - mean_baseline
                 y1 = mean + np.std(_temp, axis=1)
                 y2 = mean - np.std(_temp, axis=1)
-                axis[r, c].fill_between(np.arange(xlim_max), y1, y2, color='black', alpha=0.3)
-                axis[r, c].plot(mean, color='black')
+                axis[r, c].fill_between(np.arange(xlim_max), y1, y2,
+                    color='black', alpha=0.3)
+                axis[r, c].plot(mean, color='black', lw=1)
                 # axis[r, c].set_xlim(left=xlim_min)
                 # axis[r, c].set_ylim(ylim_min, ylim_max)
                 axis[r, c].set_xticks([])
@@ -945,10 +969,12 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
                 axis[r, c].spines['right'].set_visible(False)
                 axis[r, c].spines['left'].set_visible(False)
                 axis[r, c].spines['bottom'].set_visible(False)
-                axis[r, c].hlines(y=0, xmin=window[0], xmax=window[1], color='r', linewidth=1, linestyle='--')
+                axis[r, c].hlines(y=0, xmin=window[0], xmax=window[1], 
+                    color='r', linewidth=0.5)
                 # axis[r, c].set_ylabel('{}'.format(i+1))
                 for ind in indicate:
-                    axis[r, c].axvline(x=ind, color='black', linewidth=1, linestyle='--', alpha=0.5)
+                    axis[r, c].axvline(x=ind, color='black', linewidth=1,
+                        linestyle='--', alpha=0.5)
 
             # Unify the y-axis limit of each row
             ylim_min = 0
@@ -968,8 +994,8 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
                 scale_h = y_scale / (ylim_max - ylim_min)
                 axis[r, c].hlines(y=0, xmin=left, xmax=left+10*x_scale,
                     color='black', linewidth=1)
-                axis[r, c].vlines(x=left, ymin=-0.01, ymax=scale_h, color='black',
-                    linewidth=1)
+                axis[r, c].vlines(x=left, ymin=-0.01, ymax=scale_h,
+                    color='black', linewidth=1)
 
     plt.suptitle(title)
 
@@ -1598,7 +1624,8 @@ def plot_response(data, n_rows, window=[0, 10], scale_bar=True, title=None):
             axis[i].spines['right'].set_visible(False)
             axis[i].spines['left'].set_visible(False)
             axis[i].spines['bottom'].set_visible(False)
-            axis[i].hlines(y=0, xmin=window[0], xmax=window[1], color='r', linewidth=1, linestyle='--')
+            axis[i].hlines(y=0, xmin=window[0], xmax=window[1], color='r',
+                linewidth=0.5)
             # axis[i].set_ylabel('{}'.format(i+1))
 
             # Add horizontal and vertical scale bars with labels
@@ -2101,7 +2128,7 @@ def distance_resp(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1, idx_2,
     plt.show()
 
 def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
-    idx_2, sub_title=None, thr=30):
+    idx_2, sub_title=None, q=99.5):
     '''
     distance: distance to RF center, shape (4, 6, n_rois)
     resp_*: response amplitude, shape (4, 6, n_rois)
@@ -2113,24 +2140,24 @@ def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
     fig, axis = plt.subplots(nrows=1, ncols=ncols, figsize=(ncols*5, 5))
 
     ax_plot_distanceRFcenter_violin(axis[0], distance, resp_1, 50, idx_1, 'red',
-        thr=thr)
+        q=q)
     _data = resp_bg_1[idx_1]
-    plot_single_violin(axis[0], _data, [55], thr=thr)
+    plot_single_violin(axis[0], _data, [55], q=q)
 
     ax_plot_distanceRFcenter_violin(axis[1], distance, resp_2, 50, idx_1, 'red',
-        thr=thr)
+        q=q)
     _data = resp_bg_2[idx_1]
     plot_single_violin(axis[1], _data, [55])
 
     ax_plot_distanceRFcenter_violin(axis[2], distance, resp_1, 50, idx_2, 
-        'blue', thr=thr)
+        'blue', q=q)
     _data = resp_bg_1[idx_2]
-    plot_single_violin(axis[2], _data, [55], thr=thr)
+    plot_single_violin(axis[2], _data, [55], q=q)
 
     ax_plot_distanceRFcenter_violin(axis[3], distance, resp_2, 50, idx_2,
-        'blue', thr=thr)
+        'blue', q=q)
     _data = resp_bg_2[idx_2]
-    plot_single_violin(axis[3], _data, [55], thr=thr)
+    plot_single_violin(axis[3], _data, [55], q=q)
 
     for i in range(ncols):
         y_min = 0
@@ -2143,12 +2170,12 @@ def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
             axis[c].set_xlim(0, right=x_max+9)
             axis[c].tick_params(axis='both', which='major', labelsize=labelsize)
             axis[c].set_ylim(y_min, y_max)
-            axis[c].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            axis[c].yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.subplots_adjust(wspace=0.3)
     plt.show()
 
 def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50, 
-    idx_sel=None, bar_color='gray', sub_title=None, thr=30):
+    idx_sel=None, bar_color='gray', sub_title=None, q=99.5):
     '''
     plot the distance to RF center VS data.
     distance_rf_center: shape in (4, 6, n_rois)
@@ -2181,7 +2208,7 @@ def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50,
         idx_sel = np.logical_and(distance_rf_center_sel>=i*bin_width, 
             distance_rf_center_sel<(i+1)*bin_width)
         _data = data_sel[idx_sel]
-        idx_sel =  _data < thr
+        idx_sel =  _data < np.percentile(_data, q)
         data_ls.append(_data[idx_sel])
 
     facecolor = mcolors.to_rgb(bar_color)
@@ -2216,8 +2243,8 @@ def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50,
     ax.set_title(sub_title)
     return salient_resp
 
-def plot_single_violin(ax, data, pos, thr=30):
-    data = data[np.where(data < thr)]
+def plot_single_violin(ax, data, pos, q=99.5):
+    data = data[data < np.percentile(data, q)]
     parts = ax.violinplot(data, pos, showmeans=False, showmedians=False,
         showextrema=False, widths=4)
     parts['bodies'][0].set_facecolor('gray')
@@ -3239,7 +3266,7 @@ def scatter_hist(x, y, dot_color='black', label_r=False, identical_line=False,
     plt.rcParams['font.size'] = fontsize
 
     ax = fig.add_gridspec(top=0.75, right=0.75).subplots()
-    ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
+    ax_histx = ax.inset_axes([0, 1.1, 1, 0.25], sharex=ax)
     ax_histy = ax.inset_axes([1.05, 0, 0.25, 1], sharey=ax)
     ax_histx.tick_params(axis="x", labelbottom=False)
     ax_histy.tick_params(axis="y", labelleft=False)
@@ -4131,9 +4158,11 @@ def fig2img(fig):
 #     cv2.destroyAllWindows()
 #     video.release()
 
-def violin_plot(data, facecolor='orange', labels=None, alpha=0.5):
-    fig, ax = plt.subplots(figsize=(4, 5))
-    parts = ax.violinplot(data, showmeans=False, showmedians=False, showextrema=False)
+def violin_plot(data, facecolor='orange', labels=None, alpha=0.5, yticks=None,
+    bottom=None, figsize=(4, 5)):
+    fig, ax = plt.subplots(figsize=figsize)
+    parts = ax.violinplot(data, showmeans=False, showmedians=False,
+        showextrema=False)
     for pc in parts['bodies']:
         pc.set_facecolor(facecolor)
         pc.set_edgecolor('black')
@@ -4152,6 +4181,44 @@ def violin_plot(data, facecolor='orange', labels=None, alpha=0.5):
 
     bars_loc = np.arange(1, len(data)+1)
     ax.set_xticks(bars_loc, labels)
+    if yticks is not None:
+        ax.set_yticks(yticks)
     ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.spines[['top', 'right']].set_visible(False)
+    if bottom is not None:
+        ax.set_ylim(bottom=bottom)
+    plt.show()
+
+def violin_plot_compare(data, colors, positions, xticks, xticks_labels,
+    figsize=(7, 5), bottom=0):
+    fig, ax = plt.subplots(figsize=figsize)
+    n = data.shape[1]
+    for i in range(n):
+        _data = data[:, i]
+        _data = _data[_data < np.percentile(_data, 99.5)]
+        part = ax.violinplot(_data, positions=[positions[i]], showmeans=False,
+            showmedians=False, showextrema=False, widths=0.3)
+        for pt in part['bodies']:
+            pt.set_facecolor(colors[i])
+            pt.set_edgecolor('black')
+            pt.set_alpha(0.5)
+
+        quartile1, medians, quartile3 = np.percentile(_data, [25, 50, 75], axis=0)
+        sorted_array = np.sort(_data)
+        whisker = adjacent_values(sorted_array, quartile1, quartile3)
+        mean = np.mean(data[:, i])
+
+        ax.scatter(positions[i], medians, marker='o', color='white', s=30,
+            zorder=3)
+        ax.scatter(positions[i], mean, marker='_', color='cyan', s=200,
+            zorder=3)
+        ax.vlines(positions[i], quartile1, quartile3, color='k',
+            linestyle='-', lw=7)
+        ax.vlines(positions[i], whisker[0], whisker[1], color='k',
+            linestyle='-', lw=1)
+
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.set_xticks(xticks, xticks_labels)
+    ax.set_ylim(bottom=bottom)
     ax.spines[['top', 'right']].set_visible(False)
     plt.show()
