@@ -32,6 +32,130 @@ def adjacent_values(vals, q1, q3):
 
 def f(x, a, b, k):
     return a - b*np.exp(-k * x)
+
+def binned_box(distances, data, color):
+    from scipy.optimize import curve_fit
+
+    fontsize = 20
+    _idx_not_nan = np.logical_not(np.isnan(data))
+    bin_size = 10
+    right_lim = 260
+    bins = np.arange(0, right_lim, bin_size)
+
+    fig, ax = plt.subplots(figsize=(5, 2))
+    means, edges, _= scipy.stats.binned_statistic(distances[_idx_not_nan],
+        data[_idx_not_nan], statistic='mean', bins=bins)
+
+    positions = edges[:-1] + bin_size*0.5
+    data_no_nan = data[_idx_not_nan]
+    data_binned = [data_no_nan[(distances[_idx_not_nan] >= edges[i]) &
+        (distances[_idx_not_nan] < edges[i+1])] for i in range(len(edges)-1)]
+    data_binned = [_data[_data < np.quantile(_data, 0.99)] for _data in \
+         data_binned]
+    ax.boxplot(data_binned, positions=positions,
+        widths=0.8*bin_size,
+        patch_artist=False,  showfliers=False,
+        medianprops={'color': 'white', 'linewidth': 0}, 
+        showmeans=True, meanline=True,
+        meanprops={'color': 'cyan', 'linewidth': 1},
+        # meanprops={'marker': 'o', 'markerfacecolor': 'white',
+        #     'markeredgecolor': 'black', 'markersize': 5},
+        boxprops={'color': color}, manage_ticks=False, whis=1.5,
+        showcaps=True)
+    
+    for i in range(len(edges)-1):
+        media = np.median(data_binned[i])
+        ax.scatter(edges[i]+bin_size*0.5, media, marker='o', facecolor='white',
+            edgecolor='black', s=10, zorder=3)
+
+    ax.set_xlim(-bin_size*0.5, right_lim-bin_size*0.5)
+    # ax.set_xticks([0, 100, 200]) # , labels=['0', '100', '200']
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.tick_params(labelsize=fontsize)
+    plt.show()
+
+def binned_box_two(distances, data, color, break_point, yticks1, yticks2):
+    from scipy.optimize import curve_fit
+
+    fontsize = 20
+    _idx_not_nan = np.logical_not(np.isnan(data))
+    bin_size = 10
+    right_lim = 260
+    bins = np.arange(0, right_lim, bin_size)
+
+    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(5, 3),
+        sharex=False, height_ratios=[0.2, 0.7])
+    fig.subplots_adjust(hspace=0.0)
+    means, edges, _= scipy.stats.binned_statistic(distances[_idx_not_nan],
+        data[_idx_not_nan], statistic='mean', bins=bins)
+
+    positions = edges[:-1] + bin_size*0.5
+    data_no_nan = data[_idx_not_nan]
+    data_binned = [data_no_nan[(distances[_idx_not_nan] >= edges[i]) &
+        (distances[_idx_not_nan] < edges[i+1])] for i in range(len(edges)-1)]
+    data_binned = [_data[_data < np.quantile(_data, 0.99)] for _data in \
+         data_binned]
+    ax1.boxplot(data_binned, positions=positions,
+        widths=0.7*bin_size,
+        patch_artist=False,  showfliers=False,
+        medianprops={'color': 'white', 'linewidth': 0}, 
+        showmeans=True, meanline=True,
+        meanprops={'color': 'cyan', 'linewidth': 1},
+        # meanprops={'marker': 'o', 'markerfacecolor': 'white',
+        #     'markeredgecolor': 'black', 'markersize': 5},
+        boxprops={'color': color}, manage_ticks=False, whis=1.5,
+        showcaps=True, capprops={'color': 'gray'},
+        whiskerprops={'color': 'gray'})
+
+    ax2.boxplot(data_binned, positions=positions,
+        widths=0.7*bin_size,
+        patch_artist=False,  showfliers=False,
+        medianprops={'color': 'white', 'linewidth': 0}, 
+        showmeans=True, meanline=True,
+        meanprops={'color': 'magenta', 'linewidth': 4, 'linestyle': '-'},
+        # meanprops={'marker': 'o', 'markerfacecolor': 'white',
+        #     'markeredgecolor': 'black', 'markersize': 5},
+        boxprops={'color': color}, manage_ticks=False, whis=1.5,
+        showcaps=True, capprops={'color': 'gray'},
+        whiskerprops={'color': 'gray'})
+    
+    for i in range(len(edges)-1):
+        media = np.median(data_binned[i])
+        ax2.scatter(edges[i]+bin_size*0.5, media, marker='o', facecolor='white',
+            edgecolor='black', s=15, zorder=3)
+
+    y = means
+    x = (np.arange(1, y.size+1)) * 10 - 5
+    params, covariance = curve_fit(f=f, xdata=x, ydata=y,
+        p0=[0.185, 0.06, 0.02])
+    y_fit = f(x, params[0], params[1], params[2])
+    a0 = params[0] - params[1]
+    a = np.quantile(y, 0.9)
+    thr = a0 + (a-a0) * 0.75
+    x_size = x[y_fit>thr][0]
+
+    ax1.axvline(x=x_size, color='black', linestyle='--', linewidth=2)
+    ax2.axvline(x=x_size, color='black', linestyle='--', linewidth=2)
+    ax2.axhline(y=thr, color='black', linestyle='--', linewidth=2)
+
+    ax1.set_xlim(-bin_size*0.5, right_lim-bin_size*0.5)
+    ax2.set_xlim(-bin_size*0.5, right_lim-bin_size*0.5)
+    ax1.set_ylim(bottom=break_point)
+    ax2.set_ylim(bottom=-0.005, top=break_point)
+    # ax.set_xticks([0, 100, 200]) # , labels=['0', '100', '200']
+    ax1.spines[['right', 'top', 'bottom']].set_visible(False)
+    ax2.spines[['right', 'top']].set_visible(False)
+    ax1.tick_params(labelsize=fontsize)
+    ax1.set_xticks([])
+    ax2.tick_params(labelsize=fontsize)
+    ax1.set_yticks(yticks1)
+    ax2.set_yticks(yticks2)
+    d = .5  # proportion of vertical to horizontal extent of the slanted line
+    kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+                linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+    ax1.plot([0], [0], transform=ax1.transAxes, **kwargs)
+    # ax2.plot([0], [1], transform=ax2.transAxes, **kwargs)
+    plt.show()
     
 def binned_mean(distances, data, bar_color):
     from scipy.optimize import curve_fit
@@ -66,6 +190,70 @@ def binned_mean(distances, data, bar_color):
     ax.tick_params(labelsize=fontsize)
     ax.set_xlim(-bin_size*0.5, right_lim-bin_size*0.5)
     ax.set_ylim(bottom=0.1)
+    plt.show()
+
+def binned_violin(distances, data, color, lw=3, line_color='green'):
+    from scipy.optimize import curve_fit
+
+    fontsize = 20
+    _idx_not_nan = np.logical_not(np.isnan(data))
+    bin_size = 10
+    right_lim = 260
+    bins = np.arange(0, right_lim, bin_size)
+
+    fig, ax = plt.subplots(figsize=(5, 2))
+    means, edges, _= scipy.stats.binned_statistic(distances[_idx_not_nan],
+        data[_idx_not_nan], statistic='mean', bins=bins)
+    # facecolor = mcolors.to_rgb(bar_color)
+    # facecolor_alpha = (facecolor[0], facecolor[1], facecolor[2], 0.5)
+    # ax.bar(x=edges[:-1], height=means, align='edge', width=bin_size,
+    #     edgecolor='white', color=facecolor_alpha)
+    
+    data_no_nan = data[_idx_not_nan]
+    data_binned = [data_no_nan[(distances[_idx_not_nan] >= edges[i]) &
+        (distances[_idx_not_nan] < edges[i+1])] for i in range(len(edges)-1)]
+    data_binned = [_data[_data < np.quantile(_data, 0.99)] for _data in data_binned]
+    parts = ax.violinplot(data_binned, positions=edges[:-1]+bin_size*0.5,
+        widths=0.8*bin_size, showmeans=False, showmedians=False,
+        showextrema=False)
+    for pc in parts['bodies']:
+        pc.set_facecolor(color)
+        # pc.set_edgecolor('black')
+        pc.set_alpha(0.5)
+
+    for i in range(len(edges)-1):
+        quartile1, medians, quartile3 = np.percentile(data_binned[i], [25, 50, 75],
+            axis=0)
+        sorted_array = np.sort(data_binned[i])
+        whisker = adjacent_values(sorted_array, quartile1, quartile3)
+        mean = np.mean(data_binned[i])
+
+        ax.scatter(edges[i]+bin_size*0.5, mean, marker='o', color='white',
+            s=10, zorder=3)
+        ax.scatter(edges[i]+bin_size*0.5, medians, marker='_', color='cyan',
+            s=10*lw, zorder=3)
+        ax.vlines(edges[i]+bin_size*0.5, quartile1, quartile3, color='black',
+            linestyle='-', lw=lw, alpha=0.3)
+        ax.vlines(edges[i]+bin_size*0.5, whisker[0], whisker[1], color='black',
+            linestyle='-', lw=1, alpha=0.3)
+
+    y = means
+    x = (np.arange(1, y.size+1)) * 10 - 5
+    params, covariance = curve_fit(f=f, xdata=x, ydata=y,
+        p0=[0.185, 0.06, 0.02])
+    y_fit = f(x, params[0], params[1], params[2])
+    a0 = params[0] - params[1]
+    a = np.quantile(y, 0.9)
+    thr = a0 + (a-a0) * 0.75
+    x_size = x[y_fit>thr][0]
+    ax.axvline(x=x_size, color=line_color, linestyle='--', linewidth=2)
+    ax.axhline(y=thr, color=line_color, linestyle='--', linewidth=2)
+
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.tick_params(labelsize=fontsize)
+    ax.set_xlim(-bin_size*0.5, right_lim-bin_size*0.5)
+    ax.set_ylim(bottom=0.0, top=0.35)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     plt.show()
 
 def ori_dir(data):
@@ -2128,7 +2316,7 @@ def distance_resp(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1, idx_2,
     plt.show()
 
 def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
-    idx_2, sub_title=None, q=99.5):
+    idx_2, sub_title=None, q=99.5, lw=7, **kwargs):
     '''
     distance: distance to RF center, shape (4, 6, n_rois)
     resp_*: response amplitude, shape (4, 6, n_rois)
@@ -2136,28 +2324,28 @@ def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
     '''
     x_max = 50
     ncols = 4
-    labelsize = 20
+    labelsize = kwargs.get('labelsize', 20)
     fig, axis = plt.subplots(nrows=1, ncols=ncols, figsize=(ncols*5, 5))
 
     ax_plot_distanceRFcenter_violin(axis[0], distance, resp_1, 50, idx_1, 'red',
-        q=q)
+        q=q, lw=lw)
     _data = resp_bg_1[idx_1]
-    plot_single_violin(axis[0], _data, [55], q=q)
+    plot_single_violin(axis[0], _data, [55], q=q, lw=lw)
 
     ax_plot_distanceRFcenter_violin(axis[1], distance, resp_2, 50, idx_1, 'red',
-        q=q)
+        q=q, lw=lw)
     _data = resp_bg_2[idx_1]
-    plot_single_violin(axis[1], _data, [55])
+    plot_single_violin(axis[1], _data, [55], lw=lw)
 
     ax_plot_distanceRFcenter_violin(axis[2], distance, resp_1, 50, idx_2, 
-        'blue', q=q)
+        'blue', q=q, lw=lw)
     _data = resp_bg_1[idx_2]
-    plot_single_violin(axis[2], _data, [55], q=q)
+    plot_single_violin(axis[2], _data, [55], q=q, lw=lw)
 
     ax_plot_distanceRFcenter_violin(axis[3], distance, resp_2, 50, idx_2,
-        'blue', q=q)
+        'blue', q=q, lw=lw)
     _data = resp_bg_2[idx_2]
-    plot_single_violin(axis[3], _data, [55], q=q)
+    plot_single_violin(axis[3], _data, [55], q=q, lw=lw)
 
     for i in range(ncols):
         y_min = 0
@@ -2175,7 +2363,7 @@ def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
     plt.show()
 
 def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50, 
-    idx_sel=None, bar_color='gray', sub_title=None, q=99.5):
+    idx_sel=None, bar_color='gray', sub_title=None, q=99.5, lw=7):
     '''
     plot the distance to RF center VS data.
     distance_rf_center: shape in (4, 6, n_rois)
@@ -2230,10 +2418,10 @@ def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50,
 
         ax.scatter(positions[i], medians, marker='o', color='white', s=30,
             zorder=3)
-        ax.scatter(positions[i], mean, marker='_', color='cyan', s=200,
+        ax.scatter(positions[i], mean, marker='_', color='cyan', s=30*lw,
             zorder=3)
         ax.vlines(positions[i], quartile1, quartile3, color='k', linestyle='-',
-            lw=7)
+            lw=lw)
         ax.vlines(positions[i], whisker[0], whisker[1], color='k',
             linestyle='-', lw=1)
 
@@ -2243,7 +2431,7 @@ def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50,
     ax.set_title(sub_title)
     return salient_resp
 
-def plot_single_violin(ax, data, pos, q=99.5):
+def plot_single_violin(ax, data, pos, q=99.5, lw=7):
     data = data[data < np.percentile(data, q)]
     parts = ax.violinplot(data, pos, showmeans=False, showmedians=False,
         showextrema=False, widths=4)
@@ -2257,8 +2445,8 @@ def plot_single_violin(ax, data, pos, q=99.5):
     mean = np.mean(data)
 
     ax.scatter(pos, medians, marker='o', color='white', s=30, zorder=3)
-    ax.scatter(pos, mean, marker='_', color='cyan', s=200, zorder=3)
-    ax.vlines(pos, quartile1, quartile3, color='k', linestyle='-', lw=7)
+    ax.scatter(pos, mean, marker='_', color='cyan', s=30*lw, zorder=3)
+    ax.vlines(pos, quartile1, quartile3, color='k', linestyle='-', lw=lw)
     ax.vlines(pos, whisker[0], whisker[1], color='k', linestyle='-', lw=1)
 
 def cal_si(x,y):
@@ -2852,7 +3040,8 @@ def pix_to_visual_angle(loc_pix,para):
     loc_deg_centered = np.rad2deg(np.arctan(loc_mm_centered/para['distance']))
     return para['monitor_center'] + loc_deg_centered
 
-def hist_customize(data, bins=20, color='blue', label=False, vline=None, xlim=None, xticks=True, xlocals=None, exclude_extremum=False):
+def hist_customize(data, bins=20, color='blue', label=False, vline=None,
+    xlim=None, xticks=True, xlocals=None, exclude_extremum=False, **kwargs):
     '''
     xlocals: the locations of labels of x axis, is a list
     vline: the vertical line to mark the value, x axis location
@@ -2863,26 +3052,22 @@ def hist_customize(data, bins=20, color='blue', label=False, vline=None, xlim=No
         good = np.logical_and(good, not_one)
     
     # print('number of samples: {};'.format(good.sum()))
-    fig, ax = plt.subplots(figsize=(5, 2.5))
-    fontsize = 20
-
+    figsize = kwargs.get('figsize', (5, 2.5))
+    fig, ax = plt.subplots(figsize=figsize)
+    fontsize = kwargs.get('fontsize', 20)
     facecolor = mcolors.to_rgb(color)
     facecolor_alpha = (facecolor[0], facecolor[1], facecolor[2], 0.5)
     if xlim is not None:
         ax.set_xlim(left=xlim[0], right=xlim[1])
-        ax.hist(data[good], bins=bins, range=xlim, facecolor=facecolor_alpha, edgecolor='black')
+        ax.hist(data[good], bins=bins, range=xlim, facecolor=facecolor_alpha,
+            edgecolor='black')
     else:
-        ax.hist(data[good], bins=bins, facecolor=facecolor_alpha, edgecolor='black')
-
-    # if xlim is not None:
-    #     ax.set_xlim(left=xlim[0], right=xlim[1])
-    #     ax.hist(data[good], bins=bins, range=xlim, color=color, edgecolor='black')
-    # else:
-    #     ax.hist(data[good], bins=bins, color=color, edgecolor='black')
+        ax.hist(data[good], bins=bins, facecolor=facecolor_alpha,
+            edgecolor='black')
 
     if label:
         # ax.axvline(-0.3, color='magenta', linestyle='--', linewidth=3)
-        ax.axvline(0, color='cyan', linestyle='--', linewidth=2) # lime, limegreen
+        ax.axvline(0, color='cyan', linestyle='--', linewidth=2)
     if vline is not None:
         for v in vline:
             ax.axvline(v, color='black', linestyle='--', linewidth=2)
@@ -2890,9 +3075,13 @@ def hist_customize(data, bins=20, color='blue', label=False, vline=None, xlim=No
         ax.set_xticklabels([])
     if xlocals is not None:
         plt.xticks(xlocals)
+    ylocals = kwargs.get('ylocals', None)
+    if ylocals is not None:
+        plt.yticks(ylocals)
     ax.tick_params(axis='both', labelsize=fontsize)
     ax.spines[['top', 'right']].set_visible(False)
-    # print('mean ± std: {:.2f} ± {:.2f};'.format(np.mean(data[good]), np.std(data[good])))
+    # print('mean ± std: {:.2f} ± {:.2f};'.format(np.mean(data[good]),
+        # np.std(data[good])))
     plt.show()
 
 def hist_customize_stacked(data_bottom, data_up, xlim, bins=20, label=False, xticks=True, xlocals=None, exclude_extremum=False, title=None):
@@ -3562,7 +3751,7 @@ def scatter_moving(x, y, thr=0.03, plot=True, title=None):
 def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=False,
     fit_line=False, exclude_zero=False, exclude_extremum=False, xlim=None, 
     ylim=None, xlabel=None, ylabel=None, title=None, fit_line_color='black',
-    vline=None, hline=None):
+    vline=None, hline=None, fontsize=20):
     '''
     exclude_extremum: the exclude the value close to 1
     The histograms are not onverlapped compare the 'scatter_hist()' function
@@ -3583,9 +3772,6 @@ def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=Fa
 
     figsize = (8, 8)
     fig = plt.figure(figsize=figsize)
-
-    fontsize = 20
-    plt.rcParams['font.size'] = fontsize
 
     ax = fig.add_gridspec(top=0.75, right=0.75).subplots()
     ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
@@ -3639,7 +3825,6 @@ def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=Fa
     if identical_line:
         ax.plot(x_fit, x_fit, color='black', label='Identical', linestyle='--')
     # Set labels and legend
-    ax.tick_params(axis='both', labelsize=fontsize)
     # ax.set_xlabel('x', fontsize=fontsize)
     # ax.set_ylabel('y', fontsize=fontsize)
     # ax.legend(loc='upper right', fontsize=fontsize)
@@ -3673,9 +3858,13 @@ def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=Fa
         orientation='horizontal', edgecolor='black', range=(-1,1))
     ax_histy.axhline(y=0, c='black', linestyle='--', linewidth=2)
 
-    plt.xlabel(xlabel, fontsize=fontsize)
-    plt.ylabel(ylabel, fontsize=fontsize)
-    plt.suptitle(title, fontsize=fontsize)
+    ax.tick_params(axis='both', labelsize=fontsize)
+    ax_histx.tick_params(axis='both', labelsize=fontsize)
+    ax_histy.tick_params(axis='both', labelsize=fontsize)
+
+    plt.xlabel(xlabel, fontsize=fontsize) if xlabel is not None else None
+    plt.ylabel(ylabel, fontsize=fontsize) if ylabel is not None else None
+    plt.suptitle(title, fontsize=fontsize) if title is not None else None
     plt.show()
 
 def ax_plot_distanceRFcenter_si(ax, distance_rf_center, si, cell_type, x_max=None, idx_snr=None, bk_pref=None, bar_color='lightgrey', sub_title=None):
@@ -4159,7 +4348,7 @@ def fig2img(fig):
 #     video.release()
 
 def violin_plot(data, facecolor='orange', labels=None, alpha=0.5, yticks=None,
-    bottom=None, figsize=(4, 5)):
+    bottom=None, figsize=(4, 5), **kwargs):
     fig, ax = plt.subplots(figsize=figsize)
     parts = ax.violinplot(data, showmeans=False, showmedians=False,
         showextrema=False)
@@ -4183,7 +4372,8 @@ def violin_plot(data, facecolor='orange', labels=None, alpha=0.5, yticks=None,
     ax.set_xticks(bars_loc, labels)
     if yticks is not None:
         ax.set_yticks(yticks)
-    ax.tick_params(axis='both', which='major', labelsize=20)
+    labelsize = kwargs.get('labelsize', 20)
+    ax.tick_params(axis='both', which='major', labelsize=labelsize)
     ax.spines[['top', 'right']].set_visible(False)
     if bottom is not None:
         ax.set_ylim(bottom=bottom)
