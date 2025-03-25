@@ -74,7 +74,8 @@ def binned_box(distances, data, color):
     ax.tick_params(labelsize=fontsize)
     plt.show()
 
-def binned_box_two(distances, data, color, break_point, yticks1, yticks2):
+def binned_box_two(distances, data, color, break_point, yticks1, yticks2,
+    **kwargs):
     from scipy.optimize import curve_fit
 
     fontsize = 20
@@ -151,10 +152,14 @@ def binned_box_two(distances, data, color, break_point, yticks1, yticks2):
     ax1.set_yticks(yticks1)
     ax2.set_yticks(yticks2)
     d = .5  # proportion of vertical to horizontal extent of the slanted line
-    kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+    sl_kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
                 linestyle="none", color='k', mec='k', mew=1, clip_on=False)
-    ax1.plot([0], [0], transform=ax1.transAxes, **kwargs)
+    ax1.plot([0], [0], transform=ax1.transAxes, **sl_kwargs)
     # ax2.plot([0], [1], transform=ax2.transAxes, **kwargs)
+    if kwargs.get('xlabel') is not None:
+        ax2.set_xlabel(kwargs.get('xlabel'), fontsize=fontsize)
+    if kwargs.get('ylabel') is not None:
+        fig.supylabel(kwargs.get('ylabel'), fontsize=fontsize, x=-0.04)
     plt.show()
     
 def binned_mean(distances, data, bar_color):
@@ -290,7 +295,7 @@ print([pref_ori, osi, pref_dir, dsi])
 '''
 
 def arrow_plot_bicolor(mb,rois_pos_all, roi_sel, type, only_pref=True,
-    arrow_length_input=12, si_thr=0.1, title=None, figsize=(7, 7)):
+    arrow_length_input=12, si_thr=0.1, title=None, figsize=(7, 7), **kwargs):
     fontsize = 15
 
     rois_pos = rois_pos_all[roi_sel,:]
@@ -340,6 +345,10 @@ def arrow_plot_bicolor(mb,rois_pos_all, roi_sel, type, only_pref=True,
                     head_width=0.25', mutation_scale=10))
     ax.invert_yaxis()
     ax.tick_params(axis='both', labelsize=fontsize)
+    if kwargs.get('xlabel') is not None:
+        ax.set_xlabel(kwargs.get('xlabel'), fontsize=fontsize)
+    if kwargs.get('ylabel') is not None:
+        ax.set_ylabel(kwargs.get('ylabel'), fontsize=fontsize)
     plt.suptitle(title)
     plt.show()
 
@@ -828,7 +837,7 @@ def line_plot(mb,rois_pos_all,roi_sel,only_pref=True,line_length_input=12, si_th
     
 def line_plot_bicolor(data_dict, rois_pos_all, roi_sel, cell_type, 
     only_pref=True, line_length_input=12, si_thr=0.1, title=None,
-    figsize=(5, 5)):
+    figsize=(5, 5), **kwargs):
     '''
     dict: dictionary, {'pref_ori': np.array, 'osi': np.array}
     only_pref: True, the line length is equal; False, the line length show OSI
@@ -877,6 +886,10 @@ def line_plot_bicolor(data_dict, rois_pos_all, roi_sel, cell_type,
 
     ax.invert_yaxis()
     ax.tick_params(axis='both', labelsize=fontsize)
+    if kwargs.get('xlabel') is not None:
+        ax.set_xlabel(kwargs.get('xlabel'), fontsize=fontsize)
+    if kwargs.get('ylabel') is not None:
+        ax.set_ylabel(kwargs.get('ylabel'), fontsize=fontsize)
     plt.suptitle(title)
     plt.show()
 
@@ -952,7 +965,7 @@ def rois_plot(rois_pos_list,figsize=(8,8),x_lim=(0,512),y_lim=(0,512),c='blue',a
 
 def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5),
         x_lim=(-10,530), y_lim=(-10,530), alpha=1, exclude_extremum=True,
-        yaxis_invert=True, vmax=None, title=None):
+        yaxis_invert=True, vmax=None, title=None, **kwargs):
     good = np.logical_not(np.isnan(amp)) # not nan
     if exclude_extremum is not None:
         not_one = abs(amp) < 0.95 # # to exclude the values around 1
@@ -1001,15 +1014,18 @@ def amp_plot_bicolor(amp, rois_pos, is_exc, is_inh, figsize=(5, 5),
     fig.colorbar(s_exc, cax=axis_colorbar[0], orientation='vertical')
     axis_colorbar[0].tick_params(axis='both', labelsize=10, left=True, 
         labelleft=True, right=False, labelright=False)
-    locs = [-0.3, 0, 0.3]
     # axis_colorbar[0].set_yticks(locs)
     # axis_colorbar[0].set_ylabel('Excitatory')
     fig.colorbar(s_inh, cax=axis_colorbar[1], orientation='vertical')
     axis_colorbar[1].tick_params(axis='both', labelsize=10, left=True,
         labelleft=True, right=False, labelright=False)
     # axis_colorbar[1].set_ylabel('Inhibitory')
-    # locs = np.arange(-0.8, 0.71, 0.3)
-    # axis_colorbar[1].set_yticks(locs)
+    if kwargs.get('locs_1') is not None:
+        axis_colorbar[1].set_yticks(kwargs.get('locs_1'))
+    if kwargs.get('xlabel') is not None:
+        ax_scatter.set_xlabel(kwargs.get('xlabel'), fontsize=fontsize)
+    if kwargs.get('ylabel') is not None:
+        ax_scatter.set_ylabel(kwargs.get('ylabel'), fontsize=fontsize)
     plt.suptitle(title)
     # plt.tight_layout()
     plt.show()
@@ -1067,7 +1083,7 @@ def plot_box_dots(data, colors, labels, positions=None, ticks=None, widths=None,
     plt.show()
 
 def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
-    indicate=[], auto_baseline=False):
+    indicate=[], auto_baseline=True, **kwargs):
     '''
     data shape in (n_cols, stim_len, cell, repetition)
     indicate_time: the time point to indicate the stimulus
@@ -1135,8 +1151,12 @@ def plot_response_scalebar(data, window=[0, 10], scale_bar=False, title=None,
             # axis[i].text(xlim_min - 0.5, 0.15, '0 ms', fontsize=12)
 
     if n_cols > 1:
+        if kwargs.get('figsize') is None:
+            figsize = (n_cols*2, n_rows)
+        else:
+            figsize = kwargs.get('figsize')
         fig, axis = plt.subplots(nrows=n_rows, ncols=n_cols, 
-            layout='constrained', figsize=(n_cols*2, n_rows))
+            layout='constrained', figsize=figsize)
         for r in range(n_rows):
             for c in range(n_cols):
                 _temp = data[c, :, r, :]
@@ -1792,7 +1812,7 @@ def plot_response(data, n_rows, window=[0, 10], scale_bar=True, title=None):
     n_cols = int(data.shape[1] / n_rows)
     ylim_min = np.min(data)
     ylim_max = np.max(data)
-    print('ylim_max - ylim_min = {}'.format(ylim_max-ylim_min))
+    # print('ylim_max - ylim_min = {}'.format(ylim_max-ylim_min))
 
     fig = plt.figure(layout='constrained', figsize=(n_cols, n_rows))
     subfigs = fig.subfigures(1, n_cols, wspace=0.07)
@@ -1802,7 +1822,8 @@ def plot_response(data, n_rows, window=[0, 10], scale_bar=True, title=None):
             mean = np.mean(data[:,i+c*n_rows,:], axis=1)
             y1 = mean + np.std(data[:,i+c*n_rows,:], axis=1)
             y2 = mean - np.std(data[:,i+c*n_rows,:], axis=1)
-            axis[i].fill_between(np.arange(xlim_max), y1, y2, color='black', alpha=0.3)
+            axis[i].fill_between(np.arange(xlim_max), y1, y2, color='black',
+                alpha=0.3)
             axis[i].plot(mean, color='black')
             axis[i].set_xlim(xlim_min, xlim_max)
             axis[i].set_ylim(0.8*ylim_min, ylim_max)
@@ -1822,9 +1843,12 @@ def plot_response(data, n_rows, window=[0, 10], scale_bar=True, title=None):
                 right = 0.99
                 hline_length = 0.33
                 vline_length = 0.3 / (ylim_max - ylim_min)
-                axis[i].axhline(y = ylim_min + (ylim_max-ylim_min)*top, xmin=right-hline_length, xmax=right, color='black', linewidth=1)
+                axis[i].axhline(y = ylim_min + (ylim_max-ylim_min)*top, 
+                    xmin=right-hline_length, xmax=right, color='black',
+                    linewidth=1)
                 # axis[i].text(0.15, ylim_min - 0.1, '10 units', fontsize=12)
-                axis[i].axvline(x = right*xlim_max, ymin=top-vline_length, ymax=top, color='black', linewidth=1)
+                axis[i].axvline(x = right*xlim_max, ymin=top-vline_length,
+                    ymax=top, color='black', linewidth=1)
                 # axis[i].text(xlim_min - 0.5, 0.15, '0 ms', fontsize=12)
 
     if title is not None:
@@ -2359,8 +2383,13 @@ def distance_resp_violin(distance, resp_1, resp_2, resp_bg_1, resp_bg_2, idx_1,
             axis[c].tick_params(axis='both', which='major', labelsize=labelsize)
             axis[c].set_ylim(y_min, y_max)
             axis[c].yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    if kwargs.get('xlabel') is not None:
+        fig.supxlabel(kwargs.get('xlabel'), y=-0.01, ha='center', fontsize=labelsize)
+    if kwargs.get('ylabel') is not None:
+        fig.supylabel(kwargs.get('ylabel'), x=0.09, va='center', fontsize=labelsize)
     plt.subplots_adjust(wspace=0.3)
     plt.show()
+
 
 def ax_plot_distanceRFcenter_violin(ax, distance_rf_center, data, x_max=50, 
     idx_sel=None, bar_color='gray', sub_title=None, q=99.5, lw=7):
@@ -3082,6 +3111,10 @@ def hist_customize(data, bins=20, color='blue', label=False, vline=None,
     ax.spines[['top', 'right']].set_visible(False)
     # print('mean ± std: {:.2f} ± {:.2f};'.format(np.mean(data[good]),
         # np.std(data[good])))
+    if kwargs.get('xlabel') is not None:
+        ax.set_xlabel(kwargs.get('xlabel'), fontsize=fontsize)
+    if kwargs.get('ylabel') is not None:
+        ax.set_ylabel(kwargs.get('ylabel'), fontsize=fontsize)
     plt.show()
 
 def hist_customize_stacked(data_bottom, data_up, xlim, bins=20, label=False, xticks=True, xlocals=None, exclude_extremum=False, title=None):
@@ -3851,12 +3884,13 @@ def scatter_hist_usual(x, y, dot_color='black', label_r=False, identical_line=Fa
     ax_histx.hist(x[_idx], color='Orange', alpha=0.5, bins=bins,
         edgecolor='black', range=(-1,1))
     ax_histx.axvline(x=0, c='black', linestyle='--', linewidth=2)
-
+    ax_histx.set_ylabel('Neuron #', fontsize=fontsize)
     # for the histgram ax_histy
     _idx = good
     ax_histy.hist(y[_idx], color='green', alpha=0.5, bins=bins,
         orientation='horizontal', edgecolor='black', range=(-1,1))
     ax_histy.axhline(y=0, c='black', linestyle='--', linewidth=2)
+    ax_histy.set_xlabel('Neuron #', fontsize=fontsize)
 
     ax.tick_params(axis='both', labelsize=fontsize)
     ax_histx.tick_params(axis='both', labelsize=fontsize)
@@ -4050,7 +4084,7 @@ def plot_distanceRFcenter_v2(distance_rf_center, data, cell_type, x_max=50, bk_p
     plt.show()
     return salient_resp
 
-def pie_customize(data, si_thr=0, colors=['lightcoral', 'lightgray']):
+def pie_customize(data, si_thr=0, colors=['lightcoral', 'lightgray'], **kwargs):
     not_nan = np.logical_not(np.isnan(data))
     higher = np.logical_and(data > si_thr, not_nan)
     # lower = np.logical_and(data < -si_thr, not_nan)
@@ -4064,14 +4098,19 @@ def pie_customize(data, si_thr=0, colors=['lightcoral', 'lightgray']):
     # percentage_lower = sizes[2] / np.array(sizes).sum()
     # print('{:.0%}, {:.0%}'.format(percentage_higher, percentage_other))
 
-    fig, ax = plt.subplots(figsize=(2, 2))
+    if kwargs.get('ax') is None:
+        fig, ax = plt.subplots(figsize=(2, 2))
+    else:
+        ax = kwargs.get('ax')
     ax.pie(sizes, colors=colors, autopct='%1.0f%%', textprops={'fontsize':20},
         wedgeprops={"alpha": 0.5})
     # ax.pie(sizes, colors=colors)
     ax.texts[3].remove()
     ax.texts[1].remove()
-    fig.tight_layout()
-    plt.show()
+    fig.tight_layout() if kwargs.get('ax') is None else None
+    plt.show() if kwargs.get('ax') is None else None
+
+    return ax if kwargs.get('ax') is not None else None
 
 def pie_customize_stacked(data1, data2, si_thr=0):
     not_nan = np.logical_not(np.isnan(data1))
@@ -4377,10 +4416,14 @@ def violin_plot(data, facecolor='orange', labels=None, alpha=0.5, yticks=None,
     ax.spines[['top', 'right']].set_visible(False)
     if bottom is not None:
         ax.set_ylim(bottom=bottom)
+    if kwargs.get('xlabel') is not None:
+        ax.set_xlabel(kwargs.get('xlabel'), fontsize=labelsize)
+    if kwargs.get('ylabel') is not None:
+        ax.set_ylabel(kwargs.get('ylabel'), fontsize=labelsize)
     plt.show()
 
 def violin_plot_compare(data, colors, positions, xticks, xticks_labels,
-    figsize=(7, 5), bottom=0):
+    figsize=(7, 5), bottom=0, **kwargs):
     fig, ax = plt.subplots(figsize=figsize)
     n = data.shape[1]
     for i in range(n):
@@ -4411,4 +4454,8 @@ def violin_plot_compare(data, colors, positions, xticks, xticks_labels,
     ax.set_xticks(xticks, xticks_labels)
     ax.set_ylim(bottom=bottom)
     ax.spines[['top', 'right']].set_visible(False)
+    if kwargs.get('xlabel') is not None:
+        ax.set_xlabel(kwargs.get('xlabel'), fontsize=20)
+    if kwargs.get('ylabel') is not None:
+        ax.set_ylabel(kwargs.get('ylabel'), fontsize=20)
     plt.show()
